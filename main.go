@@ -5,7 +5,9 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -14,6 +16,7 @@ type problemSet struct {
 	answer   string
 }
 
+// Read the csv file and stores the data in "quiz"
 func csvReader() {
 	csvFile, err := os.Open(*csvFileLocation)
 	if err != nil {
@@ -37,7 +40,10 @@ func csvReader() {
 }
 
 func startQuiz() {
-	correctAnswers := 0
+	correctAnswers := 0 // keeps the track of total number of correct answers
+	if *shuffleQuestions {
+		shuffle()
+	}
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Printf("Press \"Enter\" to start the Quiz!")
 	scanner.Scan()
@@ -55,7 +61,8 @@ func startQuiz() {
 
 		select {
 		case response := <-c:
-			if response == q.answer {
+			response = whiteSpaceRemover(response)     // removes the leading and trailing white space
+			if strings.EqualFold(response, q.answer) { // compares the string in a case in-sensitive manner
 				correctAnswers++
 			}
 		case <-timer.C:
@@ -67,18 +74,32 @@ func startQuiz() {
 	result(correctAnswers)
 }
 
+// Removes the white space from the string
+func whiteSpaceRemover(response string) string {
+	return strings.TrimSpace(response)
+}
+
 func result(correctAnswers int) {
 	fmt.Printf("Out of %v questions, %v questions are correct \n", len(quiz), correctAnswers)
+}
+
+//Shuffle the questions in the quiz
+func shuffle() {
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(quiz), func(i, j int) { quiz[i], quiz[j] = quiz[j], quiz[i] })
 }
 
 //This slice will store all the questions and answers of the quiz
 var quiz []problemSet
 
 //Flag, for the csv loction
-var csvFileLocation = flag.String("location", "problems.csv", "Location of the file")
+var csvFileLocation = flag.String("location", "problems.csv", "Location of the csv")
 
 //Flag, for quiz timer
 var quizTimer = flag.Int64("timer", 30, "Duration of the quiz, in seconds")
+
+//Flag, to shuffle the questions
+var shuffleQuestions = flag.Bool("shuffle", true, "Shuffle the questions in the quiz")
 
 func main() {
 
